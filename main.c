@@ -7,8 +7,8 @@
 #define MAX_DM_COUNT 7
 
 typedef struct {
-  char *name;
-  char *path;
+	char *name;
+	char *path;
 } DM;
 
 int read_into_dms(FILE *f, DM **dms);
@@ -21,10 +21,9 @@ int main() {
 	if(!conf) {
 		char *home = getenv("HOME");
 		printf("Can't find $XDG_CONFIG_HOME, home is %s\n", home);
-		//
 		conf = malloc (
-			// /home/xyz + / +         .config   + \0
-			strlen(home) + 1 + strlen(".config") + 1);
+				// /home/xyz + / +         .config   + \0
+				strlen(home) + 1 + strlen(".config") + 1);
 		sprintf(conf, "%s/%s%c", home, ".config", 0);
 	}
 	printf("Config home: %s\n", conf);
@@ -43,7 +42,6 @@ int main() {
 		printf("Read %i entries\n", num_read);
 		show_dms(&dms,num_read);
 	}
-	//
 	free(dms);
 	return 0;
 }
@@ -52,27 +50,40 @@ int read_into_dms(FILE *f, DM **dms) {
 	size_t counted = 0;
 	size_t read = 0;
 	char *line;
-	while((read=getline(&line, &read, f)) != -1) {
+	while((read=getline(&line, &read, f)) != ((size_t)-1)) {
 		size_t i, linelen = strlen(line);
 		for(i=0; i < linelen && isspace(line[i]); i++) {}
 		int notempty = linelen - i > 0;
-		if(notempty) {
-			sscanf(line, " %m[^:]: %ms ", &dms[counted]->name, &dms[counted]->path); 
-			printf("Read %lu (%zu) :: Name = <%s>, Path = <%s>\n", 
-					read, counted, (dms[counted])->name, (dms[counted])->path);
-
-			counted++;
+		if(!notempty) {
+			break;
 		}
+		char *tname, *tpath;
+		//sscanf(line, " %m[^:]: %ms ", &dms[counted]->name, &dms[counted]->path); 
+		int parts = sscanf(line, " %m[^: \t] : %ms ", &tname, &tpath); 
+
+		dms[counted]->name = tname;
+		dms[counted]->path = tpath;
+		if(!tname || !tpath || parts < 2) {
+			printf("Enountered malformed wm configuration: (%s) -> (%s)\n", tname, tpath);
+			break;
+		}
+		printf("Read %lu (%zu) :: Name = <%s>, Path = <%s>\n", 
+				read, counted, (dms[counted])->name, (dms[counted])->path);
+
+		counted++;
+
 	}
 	printf("Found %zu display-manager entries\n", counted);
 	return counted;
 }
 
 void show_dms(DM **dms, int n) {
-  int i;
-  printf("--\n");
-  for(i = 0; i < n; ++i) {
-    printf("Read %i :: Name = %s, Path = %s\n", i, dms[i]->name, dms[i]->path);
-    printf("%s\n", (dms[i])->path);
-  }
+	int i;
+	printf("--\n");
+	for(i = 0; i < n; ++i) {
+		printf("Read %i :: Name = %s, Path = %s\n", i, dms[i]->name, dms[i]->path);
+		printf("%s\n", (dms[i])->path);
+	}
 }
+
+// vim: set ts=2 sw=2 :
